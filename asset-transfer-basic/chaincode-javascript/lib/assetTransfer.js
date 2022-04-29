@@ -11,140 +11,168 @@ const stringify  = require('json-stringify-deterministic');
 const sortKeysRecursive  = require('sort-keys-recursive');
 const { Contract } = require('fabric-contract-api');
 
-class AssetTransfer extends Contract {
+class FlightManager extends Contract {
 
     async InitLedger(ctx) {
-        const assets = [
+        //reservationNumber = 0;
+        const flights = [
             {
-                ID: 'asset1',
-                Color: 'blue',
-                Size: 5,
-                Owner: 'Tomoko',
-                AppraisedValue: 300,
+                flightNr: 'EC001',
+                flyFrom: 'BUD',
+                flyTo: 'TXL',
+                dateTime: '05032021-1034',
+                availablePlaces: 100,
             },
             {
-                ID: 'asset2',
-                Color: 'red',
-                Size: 5,
-                Owner: 'Brad',
-                AppraisedValue: 400,
-            },
-            {
-                ID: 'asset3',
-                Color: 'green',
-                Size: 10,
-                Owner: 'Jin Soo',
-                AppraisedValue: 500,
-            },
-            {
-                ID: 'asset4',
-                Color: 'yellow',
-                Size: 10,
-                Owner: 'Max',
-                AppraisedValue: 600,
-            },
-            {
-                ID: 'asset5',
-                Color: 'black',
-                Size: 15,
-                Owner: 'Adriana',
-                AppraisedValue: 700,
-            },
-            {
-                ID: 'asset6',
-                Color: 'white',
-                Size: 15,
-                Owner: 'Michel',
-                AppraisedValue: 800,
+                flightNr: 'BS015',
+                flyFrom: 'MUC',
+                flyTo: 'LIS',
+                dateTime: '10042021-2157',
+                availablePlaces: 150,
             },
         ];
 
-        for (const asset of assets) {
-            asset.docType = 'asset';
+        for (const flight of flights) {
+            //flight.docType = 'asset';
             // example of how to write to world state deterministically
             // use convetion of alphabetic order
             // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
             // when retrieving data, in any lang, the order of data will be the same and consequently also the corresonding hash
-            await ctx.stub.putState(asset.ID, Buffer.from(stringify(sortKeysRecursive(asset))));
+            await ctx.stub.putState(flight.flightNr, Buffer.from(stringify(sortKeysRecursive(flight))));
         }
     }
 
-    // CreateAsset issues a new asset to the world state with given details.
-    async CreateAsset(ctx, id, color, size, owner, appraisedValue) {
-        const exists = await this.AssetExists(ctx, id);
-        if (exists) {
-            throw new Error(`The asset ${id} already exists`);
+
+    async getFlight(ctx, id){
+        let flight = await ctx.stub.getState(id);
+        if(!flight){
+            throw new Error(`flight with id ` + id + ` doesn't exist`);
+        }
+        return flight.toString();
+    }
+
+
+    async reserveSeats(ctx, flightNr, number){
+        // TODO callable only by Travel agency organization
+        
+        let flight = await ctx.stub.getState(flightNr);
+        
+        if(!flight){
+            throw new Error(`flight with id ` + flightNr + ` doesn't exist`);
         }
 
-        const asset = {
-            ID: id,
-            Color: color,
-            Size: size,
-            Owner: owner,
-            AppraisedValue: appraisedValue,
+        if(flight[availablePlaces] < number){
+            throw new Error(`not enough available seats for flight number ` + id);
+        }
+
+        //TODO add customerNames to the reservation
+        let reservation = {
+            reservationNr: 'R' + reservationNumber++,
+            customerNames: [],
+            customerEmail: '',
+            flightNr: flightNr,
+            nrOfSeats: number,
+            status: 'Pending'
+        }
+
+        await ctx.stub.putState(reservation[reservationNr], Buffer.from(stringify(sortKeysRecursive(reservation))));
+        return JSON.stringify(reservation);
+    }
+
+
+    async checkIn(ctx, reservationNr, passportIDs){
+        // passportIDs expected as array of objects
+        // for exmaple: [{cusName: 'Viki Košte', passport: 'OP123456'}, {cusName: 'Kiko Mastičkár', passport: 'OP654321'}]
+
+        // TODO callable only by Travel agency or final customer
+
+        let reservation = await ctx.stub.getState(reservationNr);
+
+        if(!reservation){
+            throw new Error(`reservation with id ` + reservationNr + ` doesn't exist`);
+        }
+
+        reservation['customerNames'].forEach(passenger =>{
+            //if passenger doesnt have reservation, throw error
+            if(!passportIDs.find(o => o.cusName === passenger)){
+                throw new Error(`no passenger named ` + o.cusName + ` in reservation number ` + reservationNr);
+            }
+        });
+
+        reservation[status] = 'Checked-In';
+        return await ctx.stub.putState(reservationNr, Buffer.from(stringify(sortKeysRecursive(reservation))));
+    }
+
+
+    async genFlightNr(ctx, company){
+        let queryString = {
+            "selector": {"flightNr": {"$regex": "^"+company}},
+            "sort": [{"lightNr": "desc"}]
+        }
+        const flightsIterator = await ctx.stub.getQueryResult(queryString);
+        const lastFlightIter = await flightsIterator.next();
+        const lastFlightValue = Buffer.from(lastFlightIter.value.value.toString()).toString('utf8');
+        let record;
+        try {
+            record = JSON.parse(lastFlightValue);
+        } catch (err) {
+            console.log(err);
+            record = lastFlightValue;
+        }
+        let size = record.flightNr.length;
+        let id = parseInt(record.flightNr.slice(2, size));
+        id += 1;
+        return company+id;
+    }
+
+    // createFlight create a new flight to the world state with given details.
+    async createFlight(ctx, flyFrom, flyTo, dateTime, seats) {
+        // TODO org check
+        const id = await this.genFlightNr(ctx, company);
+
+        if (!id || id.length === 0)
+            throw new Error(`Wrong generated ID`);
+
+        const flight = {
+            flightNr: id,
+            flyFrom: flyFrom,
+            flyTo: flyTo,
+            dateTime: dateTime,
+            availablePlaces: seats,
         };
-        //we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
-        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
-        return JSON.stringify(asset);
+
+        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(flight))));
+        return JSON.stringify(flight);
     }
 
-    // ReadAsset returns the asset stored in the world state with given id.
-    async ReadAsset(ctx, id) {
-        const assetJSON = await ctx.stub.getState(id); // get the asset from chaincode state
-        if (!assetJSON || assetJSON.length === 0) {
-            throw new Error(`The asset ${id} does not exist`);
+    async bookSeats(ctx, reservationNr){
+        // TODO org check
+
+        let reservation = await ctx.stub.getState(reservationNr);
+        if (!reservation) {
+            throw new Error(`The reservation ${reservationNr} does not exist`);
         }
-        return assetJSON.toString();
-    }
-
-    // UpdateAsset updates an existing asset in the world state with provided parameters.
-    async UpdateAsset(ctx, id, color, size, owner, appraisedValue) {
-        const exists = await this.AssetExists(ctx, id);
-        if (!exists) {
-            throw new Error(`The asset ${id} does not exist`);
+        let flight = await this.getFlight(ctx, reservation.flightNr);
+        if (!flight) {
+            throw new Error(`The flight ${reservation.flightNr} does not exist`);
+        }
+        if(reservation.flightNr.slice(0, 1) === company && flight.availablePlaces >= reservation.nrOfSeats){
+            reservation.status = "complete";
+            flight.availablePlaces -= reservation.nrOfSeats;
+            await ctx.stub.putState(flight.flightNr, Buffer.from(stringify(sortKeysRecursive(flight))));
+            return ctx.stub.putState(reservationNr, Buffer.from(stringify(sortKeysRecursive(reservation))));
+        }
+        else{
+            throw new Error(`Not enought seats to reserve.`);
         }
 
-        // overwriting original asset with new asset
-        const updatedAsset = {
-            ID: id,
-            Color: color,
-            Size: size,
-            Owner: owner,
-            AppraisedValue: appraisedValue,
-        };
-        // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
-        return ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(updatedAsset))));
+
     }
 
-    // DeleteAsset deletes an given asset from the world state.
-    async DeleteAsset(ctx, id) {
-        const exists = await this.AssetExists(ctx, id);
-        if (!exists) {
-            throw new Error(`The asset ${id} does not exist`);
-        }
-        return ctx.stub.deleteState(id);
-    }
 
-    // AssetExists returns true when asset with given ID exists in world state.
-    async AssetExists(ctx, id) {
-        const assetJSON = await ctx.stub.getState(id);
-        return assetJSON && assetJSON.length > 0;
-    }
-
-    // TransferAsset updates the owner field of asset with given id in the world state.
-    async TransferAsset(ctx, id, newOwner) {
-        const assetString = await this.ReadAsset(ctx, id);
-        const asset = JSON.parse(assetString);
-        const oldOwner = asset.Owner;
-        asset.Owner = newOwner;
-        // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
-        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
-        return oldOwner;
-    }
-
-    // GetAllAssets returns all assets found in the world state.
-    async GetAllAssets(ctx) {
-        const allResults = [];
+    // getAllFlights returns all flights of all Airlines, inspirated by asset-transfer-basic.
+    async getAllFlights(ctx) {
+        const allFlights = [];
         // range query with empty string for startKey and endKey does an open-ended query of all assets in the chaincode namespace.
         const iterator = await ctx.stub.getStateByRange('', '');
         let result = await iterator.next();
@@ -157,11 +185,11 @@ class AssetTransfer extends Contract {
                 console.log(err);
                 record = strValue;
             }
-            allResults.push(record);
+            allFlights.push(record);
             result = await iterator.next();
         }
-        return JSON.stringify(allResults);
+        return JSON.stringify(allFlights);
     }
 }
 
-module.exports = AssetTransfer;
+module.exports = FlightManager;
