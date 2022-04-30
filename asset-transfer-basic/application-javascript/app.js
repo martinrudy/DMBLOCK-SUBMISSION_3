@@ -119,7 +119,6 @@ async function main() {
 			console.log('*** Result: committed');
 
 
-
 			console.log('\n--> Submit Transaction: UpdateAsset asset1, change the appraisedValue to 350');
 			let result = await contract.submitTransaction('createFlight', 'BUD', 'DUB', '30042022-1048', '350');
 			console.log('*** Result: committed');
@@ -128,13 +127,41 @@ async function main() {
 			}
 			// Let's try a query type operation (function).
 			// This will be sent to just one peer and the results will be shown.
+			console.log('\n--> Evaluate Transaction: getFlight, function returns all the current assets on the ledger');
+			result = await contract.evaluateTransaction('getFlight', 'BS0');
+			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+
+
 			console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current assets on the ledger');
 			result = await contract.evaluateTransaction('getAllFlights');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
-			console.log('\n--> Evaluate Transaction: reserveSeats, function returns all the current assets on the ledger');
-			result = await contract.evaluateTransaction('reserveSeats', 'EC001', 1);
+
+			console.log('\n--> Submit Transaction: reserveSeats ');
+			 result = await contract.submitTransaction( 'reserveSeats', 'BS0', 1);
+			console.log('*** Result: committed');
+			if (`${result}` !== '') {
+				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			}
+
+			console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current assets on the ledger');
+			result = await contract.evaluateTransaction('getAllFlights');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+
+
+			console.log('\n--> Evaluate Transaction: getReservation');
+			result = await contract.evaluateTransaction('getReservation', 'R99');
+			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			
+
+
+
+
+			/*console.log('\n--> Evaluate Transaction: bookSeats, function returns all the current assets on the ledger');
+			result = await contract.evaluateTransaction('bookSeats', 'R88');
+			console.log(`*** Result: ${result.toString()}`);*/
+
+
 			// Now let's try to submit a transaction.
 			// This will be sent to both peers and if both peers endorse the transaction, the endorsed proposal will be sent
 			// to the orderer to be committed by each of the peer's to the channel ledger.

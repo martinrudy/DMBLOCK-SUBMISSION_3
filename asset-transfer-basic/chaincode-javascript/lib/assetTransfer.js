@@ -16,6 +16,11 @@ var reservationNumber = 0;
 class FlightManager extends Contract {
 
     async InitLedger(ctx) {
+        const flightNrs = {}
+        await ctx.stub.putState(this.flight, Buffer.from(stringify(sortKeysRecursive(flightNrs))));
+    }
+
+    /*async InitLedger(ctx) {
         //reservationNumber = 0;
         const flights = [
             {
@@ -42,7 +47,7 @@ class FlightManager extends Contract {
             // when retrieving data, in any lang, the order of data will be the same and consequently also the corresonding hash
             await ctx.stub.putState(flight.flightNr, Buffer.from(stringify(sortKeysRecursive(flight))));
         }
-    }
+    }*/
 
 
     async getFlight(ctx, id){
@@ -53,32 +58,12 @@ class FlightManager extends Contract {
         return flight.toString();
     }
 
-
-    async reserveSeats(ctx, flightNr, number){
-        // TODO callable only by Travel agency organization
-        
-        let flight = JSON.parse((await ctx.stub.getState(flightNr)).toString());
-        
+    async getReservation(ctx, id){
+        let flight = await ctx.stub.getState(id);
         if(!flight){
-            throw new Error(`flight with id ` + flightNr + ` doesn't exist`);
+            throw new Error(`flight with id ` + id + ` doesn't exist`);
         }
-
-        if(flight.availablePlaces < number){
-            throw new Error(`not enough available seats for flight number ` + id);
-        }
-
-        //TODO add customerNames to the reservation
-        let reservation = {
-            reservationNr: 'R' + reservationNumber++,
-            customerNames: [],
-            customerEmail: '',
-            flightNr: flightNr,
-            nrOfSeats: number,
-            status: 'Pending'
-        }
-
-        await ctx.stub.putState(reservation.reservationNr, Buffer.from(stringify(sortKeysRecursive(reservation))));
-        return JSON.stringify(reservation);
+        return flight.toString();
     }
 
 
@@ -103,6 +88,27 @@ class FlightManager extends Contract {
 
         reservation[status] = 'Checked-In';
         return await ctx.stub.putState(reservationNr, Buffer.from(stringify(sortKeysRecursive(reservation))));
+    }
+
+
+    async reserveSeats(ctx, flightNr, number) {
+        // TODO org check
+        //const id = await this.genFlightNr('BS');
+
+        /*if (!id || id.length === 0)
+            throw new Error(`Wrong generated ID`);
+        */
+        const flight = {
+            reservationNr: 'R99',
+            customerNames: 'Viki Koste',
+            customerEmail: 'picus@pojebany.com',
+            flightNr: 'tvoj kokot',
+            nrOfSeats: 9,
+            status: 'Pending'
+        };
+
+        await ctx.stub.putState('R99', Buffer.from(stringify(sortKeysRecursive(flight))));
+        return JSON.stringify(flight);
     }
 
 
@@ -137,7 +143,20 @@ class FlightManager extends Contract {
             availablePlaces: seats,
         };
 
+        /*const reservation = {
+            reservationNr: 'R88',
+            customerNames: 'Viki Koste',
+            customerEmail: 'picus@pojebany.com',
+            flightNr: 'tvoj kokot',
+            nrOfSeats: 9,
+            status: 'Pending'
+        };
+
+        await ctx.stub.putState('R88', Buffer.from(stringify(sortKeysRecursive(reservation))));
+        */
         await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(flight))));
+
+       
         return JSON.stringify(flight);
     }
 
@@ -145,11 +164,13 @@ class FlightManager extends Contract {
         // TODO org check
 
         let reservation = await ctx.stub.getState(reservationNr);
-        if (!reservation) {
+
+        if(!(typeof reservation == typeof {} && reservation)){
+        //if (!reservation) {
             throw new Error(`The reservation ${reservationNr} does not exist`);
         }
         let flight = await this.getFlight(ctx, reservation.flightNr);
-        if (!flight) {
+        if (!(typeof flight == typeof {} && flight)) {
             throw new Error(`The flight ${reservation.flightNr} does not exist`);
         }
         if(reservation.flightNr.slice(0, 1) === company && flight.availablePlaces >= reservation.nrOfSeats){
