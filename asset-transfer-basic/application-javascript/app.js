@@ -118,10 +118,18 @@ async function main() {
 			await contract.submitTransaction('InitLedger');
 			console.log('*** Result: committed');
 
+
+
+			console.log('\n--> Submit Transaction: UpdateAsset asset1, change the appraisedValue to 350');
+			let result = await contract.submitTransaction('createFlight', 'BUD', 'DUB', '30042022-1048', '350');
+			console.log('*** Result: committed');
+			if (`${result}` !== '') {
+				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			}
 			// Let's try a query type operation (function).
 			// This will be sent to just one peer and the results will be shown.
 			console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current assets on the ledger');
-			let result = await contract.evaluateTransaction('getAllFlights');
+			result = await contract.evaluateTransaction('getAllFlights');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
 			// Now let's try to submit a transaction.

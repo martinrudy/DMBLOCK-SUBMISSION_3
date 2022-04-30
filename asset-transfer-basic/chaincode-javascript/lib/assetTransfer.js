@@ -10,7 +10,8 @@
 const stringify  = require('json-stringify-deterministic');
 const sortKeysRecursive  = require('sort-keys-recursive');
 const { Contract } = require('fabric-contract-api');
-
+var bsid = 0;
+var ecid = 0;
 class FlightManager extends Contract {
 
     async InitLedger(ctx) {
@@ -104,31 +105,25 @@ class FlightManager extends Contract {
     }
 
 
-    async genFlightNr(ctx, company){
-        let queryString = {
-            "selector": {"flightNr": {"$regex": "^"+company}},
-            "sort": [{"lightNr": "desc"}]
+    async genFlightNr(company){
+        let id;
+        if(company === 'BS'){
+            id = bsid;
+            bsid += 1;
+            return 'BS'+id
         }
-        const flightsIterator = await ctx.stub.getQueryResult(queryString);
-        const lastFlightIter = await flightsIterator.next();
-        const lastFlightValue = Buffer.from(lastFlightIter.value.value.toString()).toString('utf8');
-        let record;
-        try {
-            record = JSON.parse(lastFlightValue);
-        } catch (err) {
-            console.log(err);
-            record = lastFlightValue;
+        else if(company === 'EC'){
+            id = ecid;
+            ecid += 1;
+            return 'EC'+id
         }
-        let size = record.flightNr.length;
-        let id = parseInt(record.flightNr.slice(2, size));
-        id += 1;
-        return company+id;
+        return 0;
     }
 
     // createFlight create a new flight to the world state with given details.
     async createFlight(ctx, flyFrom, flyTo, dateTime, seats) {
         // TODO org check
-        const id = await this.genFlightNr(ctx, company);
+        const id = await this.genFlightNr('BS');
 
         if (!id || id.length === 0)
             throw new Error(`Wrong generated ID`);
