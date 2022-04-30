@@ -150,7 +150,7 @@ async function main() {
 
 
 			console.log('\n--> Evaluate Transaction: getReservation');
-			result = await contract.evaluateTransaction('getReservation', 'R99');
+			result = await contract.evaluateTransaction('getReservation', 'R0');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 			
 
