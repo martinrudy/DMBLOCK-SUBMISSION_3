@@ -12,6 +12,7 @@ const sortKeysRecursive  = require('sort-keys-recursive');
 const { Contract } = require('fabric-contract-api');
 var bsid = 0;
 var ecid = 0;
+var reservationNumber = 0;
 class FlightManager extends Contract {
 
     async InitLedger(ctx) {
@@ -56,13 +57,13 @@ class FlightManager extends Contract {
     async reserveSeats(ctx, flightNr, number){
         // TODO callable only by Travel agency organization
         
-        let flight = await ctx.stub.getState(flightNr);
+        let flight = JSON.parse((await ctx.stub.getState(flightNr)).toString());
         
         if(!flight){
             throw new Error(`flight with id ` + flightNr + ` doesn't exist`);
         }
 
-        if(flight[availablePlaces] < number){
+        if(flight.availablePlaces < number){
             throw new Error(`not enough available seats for flight number ` + id);
         }
 
@@ -76,7 +77,7 @@ class FlightManager extends Contract {
             status: 'Pending'
         }
 
-        await ctx.stub.putState(reservation[reservationNr], Buffer.from(stringify(sortKeysRecursive(reservation))));
+        await ctx.stub.putState(reservation.reservationNr, Buffer.from(stringify(sortKeysRecursive(reservation))));
         return JSON.stringify(reservation);
     }
 

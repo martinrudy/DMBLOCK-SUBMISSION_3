@@ -132,6 +132,9 @@ async function main() {
 			result = await contract.evaluateTransaction('getAllFlights');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
+			console.log('\n--> Evaluate Transaction: reserveSeats, function returns all the current assets on the ledger');
+			result = await contract.evaluateTransaction('reserveSeats', 'EC001', 1);
+			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 			// Now let's try to submit a transaction.
 			// This will be sent to both peers and if both peers endorse the transaction, the endorsed proposal will be sent
 			// to the orderer to be committed by each of the peer's to the channel ledger.
