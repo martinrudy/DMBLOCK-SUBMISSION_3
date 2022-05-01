@@ -23,18 +23,18 @@ class FlightManager extends Contract {
 
     async getFlight(ctx, id){
         let flight = await ctx.stub.getState(id);
-        if(!flight){
+        if(!(flight && typeof flight == typeof {} && flight.length > 0)){
             throw new Error(`flight with id ` + id + ` doesn't exist`);
         }
         return flight.toString();
     }
 
     async getReservation(ctx, id){
-        let flight = await ctx.stub.getState(id);
-        if(!flight){
-            throw new Error(`flight with id ` + id + ` doesn't exist`);
+        let reservation = await ctx.stub.getState(id);
+        if(!(reservation && typeof reservation == typeof {} && reservation.length > 0)){
+            throw new Error(`Reservation with id ` + id + ` doesn't exist`);
         }
-        return flight.toString();
+        return reservation.toString();
     }
 
 
@@ -125,24 +125,23 @@ class FlightManager extends Contract {
         return JSON.stringify(asset);
     }
 
-    async bookSeats(ctx, reservationNr){
+    async bookSeats(ctx, reservationNr, company){
         // TODO org check
 
-        let reservation = await ctx.stub.getState(reservationNr);
-
-        if(!(typeof reservation == typeof {} && reservation)){
-        //if (!reservation) {
-            throw new Error(`The reservation ${reservationNr} does not exist`);
+        let reservation = JSON.parse(await this.getReservation(ctx, reservationNr));
+        if(!reservation.flightNr.startsWith(company)){
+            throw new Error(`Your company is not able to book.`);
         }
-        let flight = await this.getFlight(ctx, reservation.flightNr);
-        if (!(typeof flight == typeof {} && flight)) {
-            throw new Error(`The flight ${reservation.flightNr} does not exist`);
+        if(reservation.status != 'Pending'){
+            throw new Error(`This reservation is not avaible to book, the status is ${reservation.status}`);
         }
-        if(reservation.flightNr.slice(0, 1) === company && flight.availablePlaces >= reservation.nrOfSeats){
-            reservation.status = "complete";
+        let flight = JSON.parse(await this.getFlight(ctx, reservation.flightNr));
+        if(flight.availablePlaces >= reservation.nrOfSeats){
+            reservation.status = "Complete";
             flight.availablePlaces -= reservation.nrOfSeats;
             await ctx.stub.putState(flight.flightNr, Buffer.from(stringify(sortKeysRecursive(flight))));
-            return ctx.stub.putState(reservationNr, Buffer.from(stringify(sortKeysRecursive(reservation))));
+            await ctx.stub.putState(reservationNr, Buffer.from(stringify(sortKeysRecursive(reservation))));
+            return this.getReservation(ctx, reservationNr);
         }
         else{
             throw new Error(`Not enought seats to reserve.`);

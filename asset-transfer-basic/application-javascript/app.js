@@ -112,7 +112,7 @@ async function main() {
 			// This type of transaction would only be run once by an application the first time it was started after it
 			// deployed the first time. Any updates to the chaincode deployed later would likely not need to run
 			// an "init" type function.
-			console.log('\n--> Submit Transaction: InitLedger, function creates the initial set of assets on the ledger');
+			/*console.log('\n--> Submit Transaction: InitLedger, function creates the initial set of assets on the ledger');
 			await contract.submitTransaction('InitLedger');
 			console.log('*** Result: committed');
 
@@ -149,11 +149,17 @@ async function main() {
 
 			console.log('\n--> Evaluate Transaction: getReservation');
 			result = await contract.evaluateTransaction('getReservation', 'R0');
-			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			console.log(`*** Result: ${prettyJSONString(result.toString())}`);*/
 			
-
-
-
+			console.log('\n--> Submit Transaction: bookSeats ');
+			let result = await contract.submitTransaction( 'bookSeats', 'R0', 'BS');
+			console.log('*** Result: committed');
+			if (`${result}` !== '') {
+				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			}
+			console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current assets on the ledger');
+			result = await contract.evaluateTransaction('getAllFlights');
+			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
 			/*console.log('\n--> Evaluate Transaction: bookSeats, function returns all the current assets on the ledger');
 			result = await contract.evaluateTransaction('bookSeats', 'R88');
