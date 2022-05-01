@@ -125,7 +125,7 @@ async function registerAndEnrollUser (caClient, wallet, orgMspId, userId, affili
 			mspId: orgMspId,
 			type: 'X.509',
 		};
-		console.log(x509Identity)
+		//console.log(x509Identity)
 		await wallet.put(userId, x509Identity);
 		console.log(`Successfully registered and enrolled user ${userId} and imported it into the wallet`);
 	} catch (error) {
@@ -189,80 +189,105 @@ async function main () {
             let answer;
             let result;
             if(organization === 'Airline' || organization === 'TravelAgency' || organization === 'Customer'){
-                console.log("Press 1 to get all flights");
-                console.log("Press 2 to create a flight");
-                console.log("Press 3 to get the flight");
-                console.log("Press 4 to book seats");
-                console.log("Press 5 to reserve seats");
-                console.log("Press 6 to check in");
-                console.log("Press 0 to exit");
+                console.log("====>Press 1 to get all flights<====");
+                console.log("====>Press 2 to create a flight<====");
+                console.log("====>Press 3 to get the flight <====");
+                console.log("====>Press 4 to book seats     <====");
+                console.log("====>Press 5 to reserve seats <====");
+                console.log("====>Press 6 to check in      <====");
+                console.log("====>Press 0 to exit          <====");
                 answer = prompt("Your choice: ");
                 if(answer == 1){
-                    console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current flights on the ledger');
-			        result = await contract.evaluateTransaction('getAllFlights');
-			        console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+                    try{
+                        console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current flights on the ledger');
+                        result = await contract.evaluateTransaction('getAllFlights');
+                        console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+                    }catch(error){
+                        console.error(`******** FAILED to run the application: ${error}`);
+                    }
                 }
                 else if(answer == 2){
-                    console.log("Creating new flight");
-                    let from = prompt("From: ");
-                    let to = prompt("To: ");
-                    let datetime = prompt("DateTime: ");
-                    let seatsNum = prompt("Number of seats: ");
-                    console.log('\n--> Submit Transaction: createFlight');
-			        let result = await contract.submitTransaction('createFlight', from, to, datetime, parseInt(seatsNum), org1UserId);
-			        console.log('*** Result: committed');
-			        if (`${result}` !== '') {
-				        console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-			        }
+                    try{
+                        console.log("Creating new flight");
+                        let from = prompt("From: ");
+                        let to = prompt("To: ");
+                        let datetime = prompt("DateTime: ");
+                        let seatsNum = prompt("Number of seats: ");
+                        console.log('\n--> Submit Transaction: createFlight');
+                        let result = await contract.submitTransaction('createFlight', from, to, datetime, parseInt(seatsNum), org1UserId);
+                        console.log('*** Result: committed');
+                        if (`${result}` !== '') {
+                            result = JSON.parse(result.toString())
+                            console.log(`*** Flight FROM:${result.from} TO:${result.to} on date ${result.datetime} with ${result.seatsNum} seats was created with Flight Number ${result.flightNr}`);
+                        }
+                    }catch(error){
+                        console.error(`******** FAILED to run the application: ${error}`);
+                    }
                 }
                 else if(answer == 3){
-                    let flightId = prompt("Please type the flight ID: ");
-                    console.log('\n--> Evaluate Transaction: getFlight, function returns all the current assets on the ledger');
-			        result = await contract.evaluateTransaction('getFlight', flightId);
-			        console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+                    try{
+                        let flightId = prompt("Please type the flight ID: ");
+                        console.log('\n--> Evaluate Transaction: getFlight, function returns all the current assets on the ledger');
+                        result = await contract.evaluateTransaction('getFlight', flightId);
+                        console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+                    }catch(error){
+                        console.error(`******** FAILED to run the application: ${error}`);
+                    }
                 }
                 else if(answer == 4){
-                    let reservationNr = prompt("Please type the reservation ID: ");
-                    console.log('\n--> Submit Transaction: bookSeats ');
-			        result = await contract.submitTransaction( 'bookSeats', reservationNr, org1UserId);
-			        console.log('*** Result: committed');
-			        if (`${result}` !== '') {
-				        console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-			        }
+                    try{
+                        let reservationNr = prompt("Please type the reservation ID: ");
+                        console.log('\n--> Submit Transaction: bookSeats ');
+                        result = await contract.submitTransaction( 'bookSeats', reservationNr, org1UserId);
+                        console.log('*** Result: committed');
+                        if (`${result}` !== '') {
+                            console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+                        }
+                    }catch(error){
+                        console.error(`******** FAILED to run the application: ${error}`);
+                    }
                 }
                 else if(answer == 5){
-                    let names = [];
-                    let flightNum = prompt("Flight number: ");
-                    let email = prompt("Where to send flying tickets (email): ");
-                    let number = prompt("Number of seats to reserve: ");
-                    let seatsNum = prompt("Number of seats: ");
-                    for(let i = 1; i <= number; i++){
-                        let name = prompt(`Name passanger ${i}: `);
-                        names.push(name);
+                    try{
+                        let names = [];
+                        let flightNum = prompt("Flight number: ");
+                        let email = prompt("Where to send flying tickets (email): ");
+                        let number = prompt("Number of seats to reserve: ");
+                        for(let i = 1; i <= number; i++){
+                            let name = prompt(`Name passanger ${i}: `);
+                            names.push(name);
+                        }
+                        console.log('\n--> Submit Transaction: reserveSeats ');
+                        result = await contract.submitTransaction( 'reserveSeats', flightNum, names, email, number);
+                        console.log('*** Result: committed');
+                        if (`${result}` !== '') {
+                            console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+                        }
+                    }catch(error){
+                        console.error(`******** FAILED to run the application: ${error}`);
                     }
-                    console.log('\n--> Submit Transaction: reserveSeats ');
-			        result = await contract.submitTransaction( 'reserveSeats', 'GladlyAbroad', flightNum, names, email, seatsNum);
-			        console.log('*** Result: committed');
-			        if (`${result}` !== '') {
-				        console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-			        }
                 }
                 else if(answer == 6){
-                    let infos = []
-                    let reservationNr = prompt("Please type the reservation number: ")
-                    let resv = JSON.parse((await contract.evaluateTransaction('getReservation', reservationNr)).toString());
-                    for(let i = 1; i <= resv.nrOfSeats; i++){
-                        let cusName = prompt(`Please type the name of passanger ${i}: `);
-                        let passport = prompt(`Please type the passport number of passanger ${i}: `);
-                        let info = {
-                            "cusName": cusName,
-                            "passport": passport
-                        };
-                        infos.push(info);
+                    try{
+                        let infos = []
+                        let reservationNr = prompt("Please type the reservation number: ")
+                        let resv = JSON.parse((await contract.evaluateTransaction('getReservation', reservationNr)).toString());
+                        for(let i = 1; i <= resv.nrOfSeats; i++){
+                            let cusName = prompt(`Please type the name of passanger ${i}: `);
+                            let passport = prompt(`Please type the passport number of passanger ${i}: `);
+                            let info = {
+                                "cusName": cusName,
+                                "passport": passport
+                            };
+                            infos.push(info);
+                        }
+                        console.log('\n--> Evaluate Transaction: checkIn');
+                        result = await contract.evaluateTransaction('checkIn', reservationNr, infos);
+                        console.log(`*** Result: ${result}`);
                     }
-                    console.log('\n--> Evaluate Transaction: checkIn');
-			        result = await contract.evaluateTransaction('checkIn', 'Customer', reservationNr, infos);
-			        console.log(`*** Result: ${result}`);
+                    catch(error){
+                        console.error(`******** FAILED to run the application: ${error}`);
+                    }
                 }
                 else if(answer == 0){
                     break;

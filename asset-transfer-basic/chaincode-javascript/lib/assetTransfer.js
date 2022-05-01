@@ -38,7 +38,9 @@ class FlightManager extends Contract {
 
     // createFlight create a new flight to the world state with given details.
     async createFlight(ctx, flyFrom, flyTo, dateTime, seats, company) {
-        // TODO org check
+        if(ctx.clientIdentity.getMSPID() != 'Org1MSP')
+            throw new Error('Change organization to create a flight.');
+
         const id = await this.genFlightNr(company);
 
         if (!id || id.length === 0)
@@ -112,12 +114,10 @@ class FlightManager extends Contract {
         return reservation.toString();
     }
 
-    async reserveSeats(ctx, caller, flightNr, customerNames, customerEmail, numberOfSeats) {
-        // TODO org check
+    async reserveSeats(ctx, flightNr, customerNames, customerEmail, numberOfSeats) {
+        if(ctx.clientIdentity.getMSPID() != 'Org2MSP')
+            throw new Error('Change organization to reserve seats.');
 
-        if(caller != 'GladlyAbroad'){
-            throw new Error(`This company is not authorized to reserve seats`);
-        }
 
         let flight = await ctx.stub.getState(flightNr);
         
@@ -146,11 +146,12 @@ class FlightManager extends Contract {
 
 
     async bookSeats(ctx, reservationNr, company){
-        // TODO org check
+        if(ctx.clientIdentity.getMSPID() != 'Org1MSP')
+            throw new Error('Change organization to book seats.');
 
         let reservation = JSON.parse(await this.getReservation(ctx, reservationNr));
         if(!reservation.flightNr.startsWith(company)){
-            throw new Error(`Your company is not able to book.`);
+            throw new Error('Your company is not able to book.');
         }
         if(reservation.status != 'Pending'){
             throw new Error(`This reservation is not avaible to book, the status is ${reservation.status}`);
@@ -169,14 +170,13 @@ class FlightManager extends Contract {
     }
 
 
-    async checkIn(ctx, caller, reservationNr, passportIDs){
+    async checkIn(ctx, reservationNr, passportIDs){
         // passportIDs expected as array of objects
         // for exmaple: [{cusName: 'Viki Košte', passport: 'OP123456'}, {cusName: 'Kiko Mastičkár', passport: 'OP654321'}]
 
         // TODO callable only by Travel agency or final customer
-        if(!(caller == 'Customer' || caller == 'EC' || caller == 'BS')){
-            throw new Error(`This organization cannot call check in`);
-        }
+        if(ctx.clientIdentity.getMSPID() != 'Org2MSP' || ctx.clientIdentity.getMSPID() != 'Org3MSP')
+            throw new Error(`Wrong organization creating flight, almost good job`);
 
         let reservation = JSON.parse(await this.getReservation(ctx, reservationNr));
 
