@@ -106,9 +106,9 @@ class FlightManager extends Contract {
     }
 
     // createFlight create a new flight to the world state with given details.
-    async createFlight(ctx, flyFrom, flyTo, dateTime, seats) {
+    async createFlight(ctx, flyFrom, flyTo, dateTime, seats, company) {
         // TODO org check
-        const id = await this.genFlightNr('BS');
+        const id = await this.genFlightNr(company);
 
         if (!id || id.length === 0)
             throw new Error(`Wrong generated ID`);
@@ -155,19 +155,35 @@ class FlightManager extends Contract {
     async getAllFlights(ctx) {
         const allFlights = [];
         // range query with empty string for startKey and endKey does an open-ended query of all assets in the chaincode namespace.
-        const iterator = await ctx.stub.getStateByRange('', '');
-        let result = await iterator.next();
-        while (!result.done) {
-            const strValue = Buffer.from(result.value.value.toString()).toString('utf8');
-            let record;
-            try {
-                record = JSON.parse(strValue);
-            } catch (err) {
-                console.log(err);
-                record = strValue;
+        const iteratorBs = await ctx.stub.getStateByRange('BS0', 'BS9999');
+        const iteratorEc = await ctx.stub.getStateByRange('EC0', 'EC9999');
+        let resultBs = await iteratorBs.next();
+        let resultEc = await iteratorEc.next();
+        while (!resultBs.done || !resultEc.done) {
+            if(!resultBs.done){
+                const strValueBs = Buffer.from(resultBs.value.value.toString()).toString('utf8');
+                let recordBs;
+                try {
+                    recordBs = JSON.parse(strValueBs);
+                } catch (err) {
+                    console.log(err);
+                    recordBs = strValueBs;
+                }
+                allFlights.push(recordBs);
+                resultBs = await iteratorBs.next();
             }
-            allFlights.push(record);
-            result = await iterator.next();
+            if(!resultEc.done){
+                const strValueEc = Buffer.from(resultEc.value.value.toString()).toString('utf8');
+                let recordEc;
+                try {
+                    recordEc = JSON.parse(strValueEc);
+                } catch (err) {
+                    console.log(err);
+                    recordEc = strValueEc;
+                }
+                allFlights.push(recordEc);
+                resultEc = await iteratorEc.next();
+            }
         }
         return JSON.stringify(allFlights);
     }

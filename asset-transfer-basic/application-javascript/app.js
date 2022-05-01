@@ -112,13 +112,20 @@ async function main() {
 			// This type of transaction would only be run once by an application the first time it was started after it
 			// deployed the first time. Any updates to the chaincode deployed later would likely not need to run
 			// an "init" type function.
-			/*console.log('\n--> Submit Transaction: InitLedger, function creates the initial set of assets on the ledger');
+			console.log('\n--> Submit Transaction: InitLedger, function creates the initial set of assets on the ledger');
 			await contract.submitTransaction('InitLedger');
 			console.log('*** Result: committed');
 
 
 			console.log('\n--> Submit Transaction: UpdateAsset asset1, change the appraisedValue to 350');
-			let result = await contract.submitTransaction('createFlight', 'BUD', 'DUB', '30042022-1048', '350');
+			let result = await contract.submitTransaction('createFlight', 'BUD', 'DUB', '30042022-1048', '350', 'BS');
+			console.log('*** Result: committed');
+			if (`${result}` !== '') {
+				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			}
+
+			console.log('\n--> Submit Transaction: UpdateAsset asset1, change the appraisedValue to 350');
+			result = await contract.submitTransaction('createFlight', 'BUD', 'DUB', '30042022-1048', '350', 'EC');
 			console.log('*** Result: committed');
 			if (`${result}` !== '') {
 				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
@@ -135,7 +142,7 @@ async function main() {
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
 
-			console.log('\n--> Submit Transaction: reserveSeats ');
+			/*console.log('\n--> Submit Transaction: reserveSeats ');
 			 result = await contract.submitTransaction( 'reserveSeats', 'BS0', 1);
 			console.log('*** Result: committed');
 			if (`${result}` !== '') {
@@ -149,9 +156,9 @@ async function main() {
 
 			console.log('\n--> Evaluate Transaction: getReservation');
 			result = await contract.evaluateTransaction('getReservation', 'R0');
-			console.log(`*** Result: ${prettyJSONString(result.toString())}`);*/
+			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 			
-			console.log('\n--> Submit Transaction: bookSeats ');
+			/*console.log('\n--> Submit Transaction: bookSeats ');
 			let result = await contract.submitTransaction( 'bookSeats', 'R0', 'BS');
 			console.log('*** Result: committed');
 			if (`${result}` !== '') {
