@@ -142,8 +142,8 @@ async function main() {
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
 
-			/*console.log('\n--> Submit Transaction: reserveSeats ');
-			 result = await contract.submitTransaction( 'reserveSeats', 'BS0', 1);
+			console.log('\n--> Submit Transaction: reserveSeats ');
+			 result = await contract.submitTransaction( 'reserveSeats', 'GladlyAbroad', 'BS0', ["Viki Koste"], 'viki@koste.com', 1);
 			console.log('*** Result: committed');
 			if (`${result}` !== '') {
 				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
@@ -152,25 +152,29 @@ async function main() {
 			console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current assets on the ledger');
 			result = await contract.evaluateTransaction('getAllFlights');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+
+			let reservationNr = 'R3';
 
 
 			console.log('\n--> Evaluate Transaction: getReservation');
-			result = await contract.evaluateTransaction('getReservation', 'R0');
+			result = await contract.evaluateTransaction('getReservation', reservationNr);
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 			
-			/*console.log('\n--> Submit Transaction: bookSeats ');
-			let result = await contract.submitTransaction( 'bookSeats', 'R0', 'BS');
+			console.log('\n--> Submit Transaction: bookSeats ');
+			 result = await contract.submitTransaction( 'bookSeats', reservationNr, 'BS');
 			console.log('*** Result: committed');
 			if (`${result}` !== '') {
 				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 			}
-			console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current assets on the ledger');
-			result = await contract.evaluateTransaction('getAllFlights');
+
+			console.log('\n--> Evaluate Transaction: getReservation');
+			result = await contract.evaluateTransaction('getReservation', reservationNr);
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
-			/*console.log('\n--> Evaluate Transaction: bookSeats, function returns all the current assets on the ledger');
-			result = await contract.evaluateTransaction('bookSeats', 'R88');
-			console.log(`*** Result: ${result.toString()}`);*/
+
+			console.log('\n--> Evaluate Transaction: checkIn');
+			result = await contract.evaluateTransaction('checkIn', 'Customer', reservationNr, [{cusName: 'psasa', passport: 'OP123456'}]);
+			console.log(`*** Result: ${result}`);
 
 
 			// Now let's try to submit a transaction.
