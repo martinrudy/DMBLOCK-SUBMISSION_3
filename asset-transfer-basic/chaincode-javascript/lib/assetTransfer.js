@@ -16,32 +16,8 @@ var reservationNumber = 0;
 class FlightManager extends Contract {
 
     async InitLedger(ctx) {
-        //reservationNumber = 0;
-        const flights = [
-            {
-                flightNr: 'EC001',
-                flyFrom: 'BUD',
-                flyTo: 'TXL',
-                dateTime: '05032021-1034',
-                availablePlaces: 100,
-            },
-            {
-                flightNr: 'BS015',
-                flyFrom: 'MUC',
-                flyTo: 'LIS',
-                dateTime: '10042021-2157',
-                availablePlaces: 150,
-            },
-        ];
-
-        for (const flight of flights) {
-            //flight.docType = 'asset';
-            // example of how to write to world state deterministically
-            // use convetion of alphabetic order
-            // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
-            // when retrieving data, in any lang, the order of data will be the same and consequently also the corresonding hash
-            await ctx.stub.putState(flight.flightNr, Buffer.from(stringify(sortKeysRecursive(flight))));
-        }
+        const flightNrs = {}
+        await ctx.stub.putState(this.asset, Buffer.from(stringify(sortKeysRecursive(flightNrs))));
     }
 
 
@@ -53,32 +29,12 @@ class FlightManager extends Contract {
         return flight.toString();
     }
 
-
-    async reserveSeats(ctx, flightNr, number){
-        // TODO callable only by Travel agency organization
-        
-        let flight = JSON.parse((await ctx.stub.getState(flightNr)).toString());
-        
+    async getReservation(ctx, id){
+        let flight = await ctx.stub.getState(id);
         if(!flight){
-            throw new Error(`flight with id ` + flightNr + ` doesn't exist`);
+            throw new Error(`flight with id ` + id + ` doesn't exist`);
         }
-
-        if(flight.availablePlaces < number){
-            throw new Error(`not enough available seats for flight number ` + id);
-        }
-
-        //TODO add customerNames to the reservation
-        let reservation = {
-            reservationNr: 'R' + reservationNumber++,
-            customerNames: [],
-            customerEmail: '',
-            flightNr: flightNr,
-            nrOfSeats: number,
-            status: 'Pending'
-        }
-
-        await ctx.stub.putState(reservation.reservationNr, Buffer.from(stringify(sortKeysRecursive(reservation))));
-        return JSON.stringify(reservation);
+        return flight.toString();
     }
 
 
@@ -106,6 +62,34 @@ class FlightManager extends Contract {
     }
 
 
+    async reserveSeats(ctx, flightNr, number) {
+        // TODO org check
+        let flight = await ctx.stub.getState(flightNr);
+        
+        if(!flight){
+            throw new Error(`flight with id ` + flightNr + ` doesn't exist`);
+        }
+
+        if(flight.availablePlaces < number){
+            throw new Error(`not enough available seats for flight number ` + id);
+        }
+
+        //TODO add customerNames to the reservation
+        let reservationId = 'R' + reservationNumber++;
+        let asset = {
+            reservationNr: reservationId,
+            customerNames: [],
+            customerEmail: '',
+            flightNr: flightNr,
+            nrOfSeats: number,
+            status: 'Pending'
+        }
+
+        await ctx.stub.putState(reservationId, Buffer.from(stringify(sortKeysRecursive(asset))));
+        return JSON.stringify(asset);
+    }
+
+
     async genFlightNr(company){
         let id;
         if(company === 'BS'){
@@ -129,7 +113,7 @@ class FlightManager extends Contract {
         if (!id || id.length === 0)
             throw new Error(`Wrong generated ID`);
 
-        const flight = {
+        const asset = {
             flightNr: id,
             flyFrom: flyFrom,
             flyTo: flyTo,
@@ -137,19 +121,21 @@ class FlightManager extends Contract {
             availablePlaces: seats,
         };
 
-        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(flight))));
-        return JSON.stringify(flight);
+        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
+        return JSON.stringify(asset);
     }
 
     async bookSeats(ctx, reservationNr){
         // TODO org check
 
         let reservation = await ctx.stub.getState(reservationNr);
-        if (!reservation) {
+
+        if(!(typeof reservation == typeof {} && reservation)){
+        //if (!reservation) {
             throw new Error(`The reservation ${reservationNr} does not exist`);
         }
         let flight = await this.getFlight(ctx, reservation.flightNr);
-        if (!flight) {
+        if (!(typeof flight == typeof {} && flight)) {
             throw new Error(`The flight ${reservation.flightNr} does not exist`);
         }
         if(reservation.flightNr.slice(0, 1) === company && flight.availablePlaces >= reservation.nrOfSeats){

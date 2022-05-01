@@ -47,9 +47,7 @@ function prettyJSONString(inputString) {
 /*
     2020-08-07T20:23:17.590Z - error: [DiscoveryService]: send[mychannel] - Channel:mychannel received discovery error:access denied
     ******** FAILED to run the application: Error: DiscoveryService: mychannel error: access denied
-
    OR
-
    Failed to register user : Error: fabric-ca request register failed with errors [[ { code: 20, message: 'Authentication failure' } ]]
    ******** FAILED to run the application: Error: Identity not found in wallet: appUser
 */
@@ -119,7 +117,6 @@ async function main() {
 			console.log('*** Result: committed');
 
 
-
 			console.log('\n--> Submit Transaction: UpdateAsset asset1, change the appraisedValue to 350');
 			let result = await contract.submitTransaction('createFlight', 'BUD', 'DUB', '30042022-1048', '350');
 			console.log('*** Result: committed');
@@ -128,13 +125,41 @@ async function main() {
 			}
 			// Let's try a query type operation (function).
 			// This will be sent to just one peer and the results will be shown.
+			console.log('\n--> Evaluate Transaction: getFlight, function returns all the current assets on the ledger');
+			result = await contract.evaluateTransaction('getFlight', 'BS0');
+			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+
+
 			console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current assets on the ledger');
 			result = await contract.evaluateTransaction('getAllFlights');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
-			console.log('\n--> Evaluate Transaction: reserveSeats, function returns all the current assets on the ledger');
-			result = await contract.evaluateTransaction('reserveSeats', 'EC001', 1);
+
+			console.log('\n--> Submit Transaction: reserveSeats ');
+			 result = await contract.submitTransaction( 'reserveSeats', 'BS0', 1);
+			console.log('*** Result: committed');
+			if (`${result}` !== '') {
+				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			}
+
+			console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current assets on the ledger');
+			result = await contract.evaluateTransaction('getAllFlights');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+
+
+			console.log('\n--> Evaluate Transaction: getReservation');
+			result = await contract.evaluateTransaction('getReservation', 'R0');
+			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			
+
+
+
+
+			/*console.log('\n--> Evaluate Transaction: bookSeats, function returns all the current assets on the ledger');
+			result = await contract.evaluateTransaction('bookSeats', 'R88');
+			console.log(`*** Result: ${result.toString()}`);*/
+
+
 			// Now let's try to submit a transaction.
 			// This will be sent to both peers and if both peers endorse the transaction, the endorsed proposal will be sent
 			// to the orderer to be committed by each of the peer's to the channel ledger.
@@ -144,23 +169,18 @@ async function main() {
 			if (`${result}` !== '') {
 				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 			}
-
 			console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
 			result = await contract.evaluateTransaction('ReadAsset', 'asset13');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-
 			console.log('\n--> Evaluate Transaction: AssetExists, function returns "true" if an asset with given assetID exist');
 			result = await contract.evaluateTransaction('AssetExists', 'asset1');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-
 			console.log('\n--> Submit Transaction: UpdateAsset asset1, change the appraisedValue to 350');
 			await contract.submitTransaction('UpdateAsset', 'asset1', 'blue', '5', 'Tomoko', '350');
 			console.log('*** Result: committed');
-
 			console.log('\n--> Evaluate Transaction: ReadAsset, function returns "asset1" attributes');
 			result = await contract.evaluateTransaction('ReadAsset', 'asset1');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-
 			try {
 				// How about we try a transactions where the executing chaincode throws an error
 				// Notice how the submitTransaction will throw an error containing the error thrown by the chaincode
@@ -170,11 +190,9 @@ async function main() {
 			} catch (error) {
 				console.log(`*** Successfully caught the error: \n    ${error}`);
 			}
-
 			console.log('\n--> Submit Transaction: TransferAsset asset1, transfer to new owner of Tom');
 			await contract.submitTransaction('TransferAsset', 'asset1', 'Tom');
 			console.log('*** Result: committed');
-
 			console.log('\n--> Evaluate Transaction: ReadAsset, function returns "asset1" attributes');
 			result = await contract.evaluateTransaction('ReadAsset', 'asset1');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);*/
