@@ -348,7 +348,7 @@ async function runTests(contract){
     passed += await test11(contract, ++numOfTests);   //try check in
 
     console.log('\n...................................................');
-    console.log('\n' + `OVERALL TESTS RESULTS: ${passed}/${numOfTests}`);
+    console.log('\n' + `OVERALL TESTS RESULT: ${passed}/${numOfTests}`);
     return;
 }
 
