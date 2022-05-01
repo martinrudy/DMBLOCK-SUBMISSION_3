@@ -137,12 +137,15 @@ async function registerAndEnrollUser (caClient, wallet, orgMspId, userId, affili
 async function main () {
 
     while(1){
-        console.log("What's your ID?");
-        console.log("For airlines type: EC or BS");
-        console.log("For travel agency type: TA")
-        console.log("For customer type: CU")
-        let org1UserId = prompt("Choose your ID: ");
-        let channelName = prompt("Please type your channel name: ");
+        console.log("****What's your ID?****");
+        console.log("=========================================================")
+        console.log("****For travel agency type: TA (GladlyAbroad)****")
+        console.log("****For customer type: CU (Customer)****")
+        console.log("****For airlines type: EC (EconFly) or BS (BusiFly)****");
+        console.log("=========================================================")
+        let org1UserId = prompt("====>Choose your ID: ");
+        let channelName = prompt("====>Please type your channel name: ");
+        console.log("=========================================================")
         let chaincodeName = 'basic';
         let ccp = null;
         let walletPath = null;
@@ -163,7 +166,7 @@ async function main () {
             ccp = buildCCPOrg1(3);
             walletPath = path.join(__dirname, 'wallet', '3');
         } else{
-            console.log('Choose correct organization');
+            console.log('!!!Choose correct organization!!!');
             break;
         }
         const caClient = buildCAClient(FabricCAServices, ccp, `ca.org${org}.example.com`);
@@ -180,23 +183,27 @@ async function main () {
         const contract = network.getContract(chaincodeName);
 
         console.log("You logged as "+org1UserId);
-        console.log('\n--> Submit Transaction: InitLedger, function creates the initial set of assets on the ledger');
+        //console.log('\n--> Submit Transaction: InitLedger, function creates the initial set of assets on the ledger');
 		await contract.submitTransaction('InitLedger');
-	    console.log('*** Result: committed');
+	    //console.log('*** Result: committed');
         
         while(1){
             console.log("Choose what to do");
             let answer;
             let result;
             if(organization === 'Airline' || organization === 'TravelAgency' || organization === 'Customer'){
-                console.log("====>Press 1 to get all flights<====");
-                console.log("====>Press 2 to create a flight<====");
-                console.log("====>Press 3 to get the flight <====");
-                console.log("====>Press 4 to book seats     <====");
-                console.log("====>Press 5 to reserve seats <====");
-                console.log("====>Press 6 to check in      <====");
-                console.log("====>Press 0 to exit          <====");
+                console.log("====================================")
+                console.log("====>Press 1 to GET ALL flights<====");
+                console.log("====>Press 2 to CREATE a flight<====");
+                console.log("====>Press 3 to GET the flight <====");
+                console.log("====>Press 4 to BOOK seats     <====");
+                console.log("====>Press 5 to RESERVE seats  <====");
+                console.log("====>Press 6 to CHECK in       <====");
+                console.log("====>Press 7 to Get rezervation<====");
+                console.log("====>Press 0 to EXIT           <====");
+                console.log("====================================")
                 answer = prompt("Your choice: ");
+                console.log("====================================")
                 if(answer == 1){
                     try{
                         console.log('\n--> Evaluate Transaction: GetAllAssets, function returns all the current flights on the ledger');
@@ -208,7 +215,7 @@ async function main () {
                 }
                 else if(answer == 2){
                     try{
-                        console.log("Creating new flight");
+                        console.log("====>Creating new flight<====");
                         let from = prompt("From: ");
                         let to = prompt("To: ");
                         let datetime = prompt("DateTime: ");
@@ -217,25 +224,29 @@ async function main () {
                         let result = await contract.submitTransaction('createFlight', from, to, datetime, parseInt(seatsNum), org1UserId);
                         console.log('*** Result: committed');
                         if (`${result}` !== '') {
-                            result = JSON.parse(result.toString())
-                            console.log(`*** Flight FROM:${result.from} TO:${result.to} on date ${result.datetime} with ${result.seatsNum} seats was created with Flight Number ${result.flightNr}`);
+                            result = JSON.parse(result.toString());
+                            console.log(`*** Flight FROM:${result.flyFrom} TO:${result.flyTo} on date ${result.dateTime} with ${result.availablePlaces} seats was created with Flight Number ${result.flightNr}`);
                         }
+                        console.log('');
                     }catch(error){
                         console.error(`******** FAILED to run the application: ${error}`);
                     }
                 }
                 else if(answer == 3){
                     try{
+                        console.log("=======>Get the flight<=======");
                         let flightId = prompt("Please type the flight ID: ");
                         console.log('\n--> Evaluate Transaction: getFlight, function returns all the current assets on the ledger');
                         result = await contract.evaluateTransaction('getFlight', flightId);
-                        console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+                        result = JSON.parse(result.toString())
+                        console.log(`*** Result: ${typeof result.availablePlaces}`);
                     }catch(error){
                         console.error(`******** FAILED to run the application: ${error}`);
                     }
                 }
                 else if(answer == 4){
                     try{
+                        console.log("=======>Book seats<=======");
                         let reservationNr = prompt("Please type the reservation ID: ");
                         console.log('\n--> Submit Transaction: bookSeats ');
                         result = await contract.submitTransaction( 'bookSeats', reservationNr, org1UserId);
@@ -250,6 +261,7 @@ async function main () {
                 else if(answer == 5){
                     try{
                         let names = [];
+                        console.log("=======>Reserve seats<=======");
                         let flightNum = prompt("Flight number: ");
                         let email = prompt("Where to send flying tickets (email): ");
                         let number = prompt("Number of seats to reserve: ");
@@ -258,10 +270,11 @@ async function main () {
                             names.push(name);
                         }
                         console.log('\n--> Submit Transaction: reserveSeats ');
-                        result = await contract.submitTransaction( 'reserveSeats', flightNum, names, email, number);
+                        result = await contract.submitTransaction( 'reserveSeats', flightNum, names, email, parseInt(number));
                         console.log('*** Result: committed');
+                        result = JSON.parse(result.toString());
                         if (`${result}` !== '') {
-                            console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+                            console.log(`*** Reservation number ${result.reservationNr} was created, your flying tickets will be send to ${result.customerEmail}`);
                         }
                     }catch(error){
                         console.error(`******** FAILED to run the application: ${error}`);
@@ -270,6 +283,7 @@ async function main () {
                 else if(answer == 6){
                     try{
                         let infos = []
+                        console.log("=========>Check in<=========");
                         let reservationNr = prompt("Please type the reservation number: ")
                         let resv = JSON.parse((await contract.evaluateTransaction('getReservation', reservationNr)).toString());
                         for(let i = 1; i <= resv.nrOfSeats; i++){
@@ -284,6 +298,18 @@ async function main () {
                         console.log('\n--> Evaluate Transaction: checkIn');
                         result = await contract.evaluateTransaction('checkIn', reservationNr, infos);
                         console.log(`*** Result: ${result}`);
+                    }
+                    catch(error){
+                        console.error(`******** FAILED to run the application: ${error}`);
+                    }
+                }
+                else if(answer == 7){
+                    try{
+                        console.log("=========>Get rezervation<=========");
+                        let reservationNr = prompt("Please type the reservation number: ")
+                        console.log('\n--> Evaluate Transaction: getReservation');
+			            result = await contract.evaluateTransaction('getReservation', reservationNr);
+			            console.log(`*** Result: ${prettyJSONString(result.toString())}`);
                     }
                     catch(error){
                         console.error(`******** FAILED to run the application: ${error}`);

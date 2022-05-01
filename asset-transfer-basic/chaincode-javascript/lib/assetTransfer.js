@@ -51,7 +51,7 @@ class FlightManager extends Contract {
             flyFrom: flyFrom,
             flyTo: flyTo,
             dateTime: dateTime,
-            availablePlaces: seats,
+            availablePlaces: parseInt(seats),
         };
 
         await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
@@ -136,7 +136,7 @@ class FlightManager extends Contract {
             customerNames: customerNames,
             customerEmail: customerEmail,
             flightNr: flightNr,
-            nrOfSeats: numberOfSeats,
+            nrOfSeats: parseInt(numberOfSeats),
             status: 'Pending'
         }
 
@@ -158,7 +158,7 @@ class FlightManager extends Contract {
         }
         let flight = JSON.parse(await this.getFlight(ctx, reservation.flightNr));
         if(flight.availablePlaces >= reservation.nrOfSeats){
-            reservation.status = "Complete";
+            reservation.status = "Completed";
             flight.availablePlaces -= reservation.nrOfSeats;
             await ctx.stub.putState(flight.flightNr, Buffer.from(stringify(sortKeysRecursive(flight))));
             await ctx.stub.putState(reservationNr, Buffer.from(stringify(sortKeysRecursive(reservation))));
