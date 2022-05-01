@@ -39,6 +39,10 @@ class FlightManager extends Contract {
     // createFlight create a new flight to the world state with given details.
     async createFlight(ctx, flyFrom, flyTo, dateTime, seats, company) {
         // TODO org check
+        if(!(company == 'BS' || company == 'EC')){
+            throw new Error(`Wrong generated ID`);
+        }
+
         const id = await this.genFlightNr(company);
 
         if (!id || id.length === 0)
@@ -96,6 +100,10 @@ class FlightManager extends Contract {
 
 
     async getFlight(ctx, id){
+        if(id.startsWith('R')){
+            throw new Error(`cannot access reservation here`);
+        }
+
         let flight = await ctx.stub.getState(id);
         if(!(flight && typeof flight == typeof {} && flight.length > 0)){
             throw new Error(`flight with id ` + id + ` doesn't exist`);
@@ -114,9 +122,13 @@ class FlightManager extends Contract {
 
     async reserveSeats(ctx, caller, flightNr, customerNames, customerEmail, numberOfSeats) {
         // TODO org check
+        customerNames = JSON.parse(customerNames);
 
         if(caller != 'GladlyAbroad'){
             throw new Error(`This company is not authorized to reserve seats`);
+        }
+        if(numberOfSeats != customerNames.length){
+            throw new Error(`Number of seats ${numberOfSeats} doesn't match number of customer names ${customerNames.length}, ${customerNames}`);
         }
 
         let flight = await ctx.stub.getState(flightNr);
