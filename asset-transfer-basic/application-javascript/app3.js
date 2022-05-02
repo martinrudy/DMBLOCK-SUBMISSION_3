@@ -106,6 +106,7 @@ async function registerAndEnrollUser (caClient, wallet, orgMspId, userId, affili
 		const provider = wallet.getProviderRegistry().getProvider(adminIdentity.type);
 		const adminUser = await provider.getUserContext(adminIdentity, adminUserId);
 
+        console.log(caClient);
 		// Register the user, enroll the user, and import the new identity into the wallet.
 		// if affiliation is specified by client, the affiliation value must be configured in CA
 		const secret = await caClient.register({
@@ -113,6 +114,7 @@ async function registerAndEnrollUser (caClient, wallet, orgMspId, userId, affili
 			enrollmentID: userId,
 			role: 'client'
 		}, adminUser);
+        console.log("register done");
 		const enrollment = await caClient.enroll({
 			enrollmentID: userId,
 			enrollmentSecret: secret
