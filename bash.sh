@@ -1,6 +1,8 @@
 #!/bin/bash
 
-export PATH=/Users/pc/Documents/FIIT/DMBLOCK/cviko8/fabric-samples/bin:$PATH
+#export PATH=/Users/pc/Documents/FIIT/DMBLOCK/cviko8/fabric-samples/bin:$PATH
+
+export PATH=/Users/davidpetricko/dmblock-zadanie3/bin:$PATH
 
 # switch to the base folder
 cd test-network
