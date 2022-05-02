@@ -2,8 +2,6 @@ var { Gateway, Wallets } = require('fabric-network');
 var FabricCAServices = require('fabric-ca-client');
 var path = require('path');
 var fs = require('fs');
-var { buildCAClient, registerAndEnrollUser, enrollAdmin } = require('../../test-application/javascript/CAUtil.js');
-var { buildWallet } = require('../../test-application/javascript/AppUtil.js');
 
 var channelName = 'channel1';
 var chaincodeName = 'basic';
@@ -11,23 +9,133 @@ var mspOrg1 = 'Org1MSP';
 var walletPath = path.join(__dirname, 'wallet');
 var org1UserId = 'appUser';
 
-function prettyJSONString(inputString) {
-	return JSON.stringify(JSON.parse(inputString), null, 2);
-}
+const adminUserId = 'admin';
+const adminUserPasswd = 'adminpw';
 
-
-var buildCCPOrg1 = function(orgnum = 1) {
-    var ccpPath = path.resolve(__dirname, '..', '..', 'test-network', 'organizations', 'peerOrganizations', `org${orgnum}.example.com`, `connection-org${orgnum}.json`);
-    var fileExists = fs.existsSync(ccpPath);
+const buildCCPOrg1 = function(orgnum = 1) {
+    const ccpPath = path.resolve(__dirname, '..', '..', 'test-network', 'organizations', 'peerOrganizations', `org${orgnum}.example.com`, `connection-org${orgnum}.json`);
+    const fileExists = fs.existsSync(ccpPath);
     if (!fileExists) {
         throw new Error(`no such file or directory: ${ccpPath}`);
     }
-    var contents = fs.readFileSync(ccpPath, 'utf8');
+    const contents = fs.readFileSync(ccpPath, 'utf8');
   
-    var ccp = JSON.parse(contents);
+    const ccp = JSON.parse(contents);
   
     console.log(`Loaded the network configuration located at ${ccpPath}`);
     return ccp;
+  };
+  
+  // Inpiration from fabric-samples
+  const buildWallet = async function (Wallets, walletPath) {
+    let wallet;
+    if (walletPath) {
+        wallet = await Wallets.newFileSystemWallet(walletPath);
+        console.log(`Built a file system wallet at ${walletPath}`);
+    } else {
+        wallet = await Wallets.newInMemoryWallet();
+        console.log('Built an in memory wallet');
+    }
+  
+    return wallet;
+  };
+  
+  // Inpiration from fabric-samples
+  const prettyJSONString = function(inputString) {
+    try{
+        if(inputString)
+           return JSON.stringify(JSON.parse(inputString), null, 2);
+        else
+            return "";
+    } catch(e) {
+        console.log(`Exception error ${e} thrown by JSON.*, result is: ${inputString}`);
+        return ""
+    }
+  }
+  // Inpiration from fabric-samples
+  function buildCAClient (FabricCAServices, ccp, caHostName) {
+      const caInfo = ccp.certificateAuthorities[caHostName]; 
+      const caTLSCACerts = caInfo.tlsCACerts.pem;
+      const caClient = new FabricCAServices(caInfo.url, { trustedRoots: caTLSCACerts, verify: false }, caInfo.caName);
+      return caClient;
+  };
+  
+  // Inpiration from fabric-samples
+  async function enrollAdmin (caClient, wallet, orgMspId){
+      try {
+          // Check to see if we've already enrolled the admin user.
+          const identity = await wallet.get(adminUserId);
+          if (identity) {
+              console.log('An identity for the admin user already exists in the wallet');
+              return;
+          }
+  
+          // Enroll the admin user, and import the new identity into the wallet.
+          const enrollment = await caClient.enroll({ enrollmentID: adminUserId, enrollmentSecret: adminUserPasswd });
+          const x509Identity = {
+              credentials: {
+                  certificate: enrollment.certificate,
+                  privateKey: enrollment.key.toBytes(),
+              },
+              mspId: orgMspId,
+              type: 'X.509',
+          };
+          await wallet.put(adminUserId, x509Identity);
+          console.log('Successfully enrolled admin user and imported it into the wallet');
+      } catch (error) {
+          console.error(`Failed to enroll admin user : ${error}`);
+      }
+  };
+  
+  // Inpiration from fabric-samples
+  async function registerAndEnrollUser (caClient, wallet, orgMspId, userId, affiliation){
+      try {
+          // Check to see if we've already enrolled the user
+          const userIdentity = await wallet.get(userId);
+          if (userIdentity) {
+              console.log(`An identity for the user ${userId} already exists in the wallet`);
+              return;
+          }
+  
+          // Must use an admin to register a new user
+          const adminIdentity = await wallet.get(adminUserId);
+          if (!adminIdentity) {
+              console.log('An identity for the admin user does not exist in the wallet');
+              console.log('Enroll the admin user before retrying');
+              return;
+          }
+  
+          // build a user object for authenticating with the CA
+          const provider = wallet.getProviderRegistry().getProvider(adminIdentity.type);
+          const adminUser = await provider.getUserContext(adminIdentity, adminUserId);
+  
+          console.log(caClient);
+          // Register the user, enroll the user, and import the new identity into the wallet.
+          // if affiliation is specified by client, the affiliation value must be configured in CA
+          const secret = await caClient.register({
+              affiliation: affiliation,
+              enrollmentID: userId,
+              role: 'client'
+          }, adminUser);
+          console.log("register done");
+          const enrollment = await caClient.enroll({
+              enrollmentID: userId,
+              enrollmentSecret: secret
+          });
+          const x509Identity = {
+              credentials: {
+                  certificate: enrollment.certificate,
+                  privateKey: enrollment.key.toBytes(),
+              },
+              mspId: orgMspId,
+              type: 'X.509',
+          };
+          //console.log(x509Identity)
+          await wallet.put(userId, x509Identity);
+          console.log(`Successfully registered and enrolled user ${userId} and imported it into the wallet`);
+      } catch (error) {
+          console.error(`Failed to register user : ${error}`);
+      }
   };
 
 
@@ -188,53 +296,12 @@ async function test6(contract, testNr){
 
 
 async function test7(contract,  testNr){
-
-    /*let org1UserId = "TA";
-    let channelName = "channel1";
-    let chaincodeName = 'basic';
-    let ccp = null;
-    let walletPath = null;
-    let org = 0;
-    if(org1UserId == 'EC' || org1UserId == 'BS'){
-        organization = 'Airline';
-        org = '1';
-        ccp = buildCCPOrg1(1);
-        walletPath = path.join(__dirname, 'wallet', '1');
-    } else if(org1UserId == 'TA') {
-        organization = 'TravelAgency';
-        org = '2'
-        ccp = buildCCPOrg1(2);
-        walletPath = path.join(__dirname, 'wallet', '2');
-    } else if (org1UserId == 'CU'){
-        organization = 'Customer';
-        org = '3'
-        ccp = buildCCPOrg1(3);
-        walletPath = path.join(__dirname, 'wallet', '3');
-    } else{
-        console.log('!!!Choose correct organization!!!');
-        return;
-    }
-    var caClient = buildCAClient(FabricCAServices, ccp, `ca.org${org}.example.com`);
-    var wallet = await buildWallet(Wallets, walletPath);
-    await enrollAdmin(caClient, wallet, `Org${org}MSP`);
-    await registerAndEnrollUser(caClient, wallet, `Org${org}MSP`, org1UserId, `org${org}.department1`);
-    var gateway = new Gateway();
-    await gateway.connect(ccp, {
-        wallet,
-        identity: org1UserId,
-        discovery: { enabled: true, asLocalhost: true }
-    });
-    var network = await gateway.getNetwork(channelName);
-    var contractNew = network.getContract(chaincodeName);
-*/
-
-
     console.log('\n\n' +`--> Running test ${testNr}: create reservation`);
     let testResult = 'PASSED';
     let result;
 
     try{
-        result = await contractNew.submitTransaction('reserveSeats', 'BS0', JSON.stringify(["Viki Koste"]), 'viki@koste.com', 1);
+        result = await contract.submitTransaction('reserveSeats', 'BS0', JSON.stringify(["Viki Koste"]), 'viki@koste.com', 1);
         if (`${result}` !== '') {
             console.log(`*** Result: ${prettyJSONString(result.toString())}`);
         }
@@ -402,6 +469,52 @@ async function runTests(contract){
 }
 
 
+
+
+async function changeOrg(org1UserId){
+    channelName = "channel1";
+    chaincodeName = 'basic';
+    ccp = null;
+    walletPath = null;
+    //org1UserId = "TA";
+    org = 0;
+    if(org1UserId == 'EC' || org1UserId == 'BS'){
+        organization = 'Airline';
+        org = '1';
+        ccp = buildCCPOrg1(1);
+        walletPath = path.join(__dirname, 'wallet', '1');
+    } else if(org1UserId == 'TA') {
+        organization = 'TravelAgency';
+        org = '2'
+        ccp = buildCCPOrg1(2);
+        walletPath = path.join(__dirname, 'wallet', '2');
+    } else if (org1UserId == 'CU'){
+        organization = 'Customer';
+        org = '3'
+        ccp = buildCCPOrg1(3);
+        walletPath = path.join(__dirname, 'wallet', '3');
+    } else{
+        console.log('!!!Choose correct organization!!!');
+        return;
+    }
+    caClient = buildCAClient(FabricCAServices, ccp, `ca.org${org}.example.com`);
+    wallet = await buildWallet(Wallets, walletPath);
+    await enrollAdmin(caClient, wallet, `Org${org}MSP`);
+    await registerAndEnrollUser(caClient, wallet, `Org${org}MSP`, org1UserId, `org${org}.department1`);
+    gateway = new Gateway();
+    console.log("ORG ID: ", org1UserId);
+    await gateway.connect(ccp, {
+        wallet,
+        identity: org1UserId,
+        discovery: { enabled: true, asLocalhost: true }
+    });
+    network = await gateway.getNetwork(channelName);
+    return network.getContract(chaincodeName);
+}
+
+
+
+
 /**
  *  A test application to show basic queries operations with any of the asset-transfer-basic chaincodes
  *   -- How to submit a transaction
@@ -428,7 +541,6 @@ async function runTests(contract){
 		// in a real application this would be done only when a new user was required to be added
 		// and would be part of an administrative flow
 		await registerAndEnrollUser(caClient, wallet, mspOrg1, org1UserId, 'org1.department1');
-
 		// Create a new gateway instance for interacting with the fabric network.
 		// In a real application this would be done as the backend server session is setup for
 		// a user that has been verified.
@@ -467,47 +579,13 @@ async function runTests(contract){
             passed += await test5(contract, ++numOfTests);   //try to get non existing flight
             passed += await test6(contract, ++numOfTests);   //try to get reservation, not a flight
 
-
+            gateway.disconnect();
 
             
             
-            channelName = "channel1";
-            chaincodeName = 'basic';
-            ccp = null;
-            walletPath = null;
-            org1UserId = "TA";
-            org = 0;
-            if(org1UserId == 'EC' || org1UserId == 'BS'){
-                organization = 'Airline';
-                org = '1';
-                ccp = buildCCPOrg1(1);
-                walletPath = path.join(__dirname, 'wallet', '1');
-            } else if(org1UserId == 'TA') {
-                organization = 'TravelAgency';
-                org = '2'
-                ccp = buildCCPOrg1(2);
-                walletPath = path.join(__dirname, 'wallet', '2');
-            } else if (org1UserId == 'CU'){
-                organization = 'Customer';
-                org = '3'
-                ccp = buildCCPOrg1(3);
-                walletPath = path.join(__dirname, 'wallet', '3');
-            } else{
-                console.log('!!!Choose correct organization!!!');
-                return;
-            }
-            caClient = buildCAClient(FabricCAServices, ccp, `ca.org${org}.example.com`);
-            wallet = await buildWallet(Wallets, walletPath);
-            await enrollAdmin(caClient, wallet, `Org${org}MSP`);
-            await registerAndEnrollUser(caClient, wallet, `Org${org}MSP`, org1UserId, `org${org}.department1`);
-            gateway = new Gateway();
-            await gateway.connect(ccp, {
-                wallet,
-                identity: org1UserId,
-                discovery: { enabled: true, asLocalhost: true }
-            });
-            network = await gateway.getNetwork(channelName);
-            contract = network.getContract(chaincodeName);
+            
+
+            contract = await changeOrg("TA");
 
 
             // reserveSeats tests
@@ -515,51 +593,24 @@ async function runTests(contract){
             passed += await test8(contract, ++numOfTests);   //wrong organization calling function
             passed += await test9(contract, ++numOfTests);   //number of seats is not matching number of names
 
+            gateway.disconnect();
 
-
-            org1UserId = "TA";
-            org = 0;
-            if(org1UserId == 'EC' || org1UserId == 'BS'){
-                organization = 'Airline';
-                org = '1';
-                ccp = buildCCPOrg1(1);
-                walletPath = path.join(__dirname, 'wallet', '1');
-            } else if(org1UserId == 'TA') {
-                organization = 'TravelAgency';
-                org = '2'
-                ccp = buildCCPOrg1(2);
-                walletPath = path.join(__dirname, 'wallet', '2');
-            } else if (org1UserId == 'CU'){
-                organization = 'Customer';
-                org = '3'
-                ccp = buildCCPOrg1(3);
-                walletPath = path.join(__dirname, 'wallet', '3');
-            } else{
-                console.log('!!!Choose correct organization!!!');
-                return;
-            }
-            caClient = buildCAClient(FabricCAServices, ccp, `ca.org${org}.example.com`);
-            wallet = await buildWallet(Wallets, walletPath);
-            await enrollAdmin(caClient, wallet, `Org${org}MSP`);
-            await registerAndEnrollUser(caClient, wallet, `Org${org}MSP`, org1UserId, `org${org}.department1`);
-            gateway = new Gateway();
-            await gateway.connect(ccp, {
-                wallet,
-                identity: org1UserId,
-                discovery: { enabled: true, asLocalhost: true }
-            });
-            network = await gateway.getNetwork(channelName);
-            contract = network.getContract(chaincodeName);
+            contract = await changeOrg("BS");
 
 
             // bookSeats tests
             passed += await test10(contract, ++numOfTests);   //book some seats
+
+            gateway.disconnect();
+
+            contract = await changeOrg("TA");
 
             // check in tests
             passed += await test11(contract, ++numOfTests);   //try check in
 
             console.log('\n...................................................');
             console.log('\n' + `OVERALL TESTS RESULT: ${passed}/${numOfTests}`);
+            gateway.disconnect();
             return;
 
 		} finally {
